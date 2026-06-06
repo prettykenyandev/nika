@@ -12,12 +12,13 @@ public sealed record PosVariantDto(
     int StockQuantity,
     string? ImageUrl);
 
-/// <summary>The outcome of a completed cash sale at the till.</summary>
+/// <summary>The outcome of a till sale paid by Card or M-Pesa.</summary>
 public sealed record PosSaleResult(
     Guid OrderId,
     string OrderNumber,
     decimal Total,
     string Currency,
-    decimal? AmountTendered,
-    decimal? Change,
-    DateTime PaidAtUtc);
+    string Method,
+    string Status,
+    string Message,
+    DateTime? PaidAtUtc);

@@ -12,6 +12,8 @@ interface SaleLine {
   quantity: number;
 }
 
+type PayMethod = "Card" | "Mpesa";
+
 function formatMoney(amount: number, currency: string): string {
   const symbol = currency === "KES" ? "Ksh" : currency;
   return `${symbol} ${amount.toLocaleString(undefined, {
@@ -23,7 +25,8 @@ function formatMoney(amount: number, currency: string): string {
 export default function PosTerminal() {
   const [lines, setLines] = useState<SaleLine[]>([]);
   const [sku, setSku] = useState("");
-  const [cash, setCash] = useState("");
+  const [method, setMethod] = useState<PayMethod>("Card");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<PosSaleResult | null>(null);
@@ -33,11 +36,7 @@ export default function PosTerminal() {
   const currency = lines[0]?.variant.currency ?? "KES";
   const total = lines.reduce((sum, l) => sum + l.variant.price * l.quantity, 0);
   const itemCount = lines.reduce((sum, l) => sum + l.quantity, 0);
-  const cashValue = cash.trim() === "" ? null : Number(cash);
-  const change =
-    cashValue !== null && Number.isFinite(cashValue) && cashValue >= total
-      ? cashValue - total
-      : null;
+  const phoneValid = /^(2547|2541)\d{8}$/.test(phone.trim());
 
   function focusSku() {
     requestAnimationFrame(() => skuRef.current?.focus());
@@ -106,7 +105,8 @@ export default function PosTerminal() {
   function resetSale() {
     setLines([]);
     setSku("");
-    setCash("");
+    setPhone("");
+    setMethod("Card");
     setError(null);
     setNotice(null);
     setReceipt(null);
@@ -118,8 +118,8 @@ export default function PosTerminal() {
       setError("Add at least one item.");
       return;
     }
-    if (cashValue !== null && (!Number.isFinite(cashValue) || cashValue < total)) {
-      setError(`Cash tendered must be at least ${formatMoney(total, currency)}.`);
+    if (method === "Mpesa" && !phoneValid) {
+      setError("Enter the customer's M-Pesa phone as 2547XXXXXXXX.");
       return;
     }
     setError(null);
@@ -130,7 +130,8 @@ export default function PosTerminal() {
           productVariantId: l.variant.variantId,
           quantity: l.quantity,
         })),
-        cashTendered: cashValue,
+        method,
+        customerPhone: method === "Mpesa" ? phone.trim() : null,
       });
       if (res.error || !res.result) {
         setError(res.error ?? "Sale failed.");
@@ -142,16 +143,27 @@ export default function PosTerminal() {
 
   // ---- Receipt view (sale completed) ----
   if (receipt) {
+    const paid = receipt.status === "Paid";
     return (
-      <div className="mx-auto max-w-md border border-success/40 bg-success/10 p-6">
+      <div
+        className={`mx-auto max-w-md border p-6 ${
+          paid
+            ? "border-success/40 bg-success/10"
+            : "border-accent/40 bg-accent/10"
+        }`}
+      >
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-success">
-            Paid
+          <p
+            className={`text-sm font-semibold uppercase tracking-wide ${
+              paid ? "text-success" : "text-accent"
+            }`}
+          >
+            {receipt.status}
           </p>
-          <h2 className="mt-1 text-2xl font-bold">Sale complete</h2>
-          <p className="mt-1 text-sm text-muted">
-            Order {receipt.orderNumber}
-          </p>
+          <h2 className="mt-1 text-2xl font-bold">
+            {paid ? "Sale complete" : "Awaiting M-Pesa"}
+          </h2>
+          <p className="mt-1 text-sm text-muted">Order {receipt.orderNumber}</p>
         </div>
 
         <dl className="mt-6 space-y-2 text-sm">
@@ -161,21 +173,15 @@ export default function PosTerminal() {
               {formatMoney(receipt.total, receipt.currency)}
             </dd>
           </div>
-          {receipt.amountTendered !== null ? (
-            <div className="flex justify-between">
-              <dt className="text-muted">Cash tendered</dt>
-              <dd>{formatMoney(receipt.amountTendered, receipt.currency)}</dd>
-            </div>
-          ) : null}
-          {receipt.change !== null ? (
-            <div className="flex justify-between border-t border-border-soft pt-2 text-base">
-              <dt className="font-semibold">Change due</dt>
-              <dd className="font-bold text-success">
-                {formatMoney(receipt.change, receipt.currency)}
-              </dd>
-            </div>
-          ) : null}
+          <div className="flex justify-between">
+            <dt className="text-muted">Payment</dt>
+            <dd>{receipt.method}</dd>
+          </div>
         </dl>
+
+        <p className="mt-4 border-t border-border-soft pt-4 text-sm text-muted">
+          {receipt.message}
+        </p>
 
         <button
           type="button"
@@ -309,33 +315,72 @@ export default function PosTerminal() {
           </span>
         </div>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted">Cash tendered (optional)</span>
-          <input
-            inputMode="decimal"
-            value={cash}
-            onChange={(e) => setCash(e.target.value)}
-            placeholder="e.g. 1000"
-            className="border border-border-soft bg-background px-3 py-2 text-base outline-none focus:border-accent"
-          />
-        </label>
-
-        {change !== null ? (
-          <div className="flex justify-between text-lg">
-            <span className="text-muted">Change</span>
-            <span className="font-bold text-success">
-              {formatMoney(change, currency)}
-            </span>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-muted">Payment method</span>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMethod("Card")}
+              className={`border px-3 py-2 text-sm font-semibold transition ${
+                method === "Card"
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border-soft text-muted hover:border-accent"
+              }`}
+            >
+              Card
+            </button>
+            <button
+              type="button"
+              onClick={() => setMethod("Mpesa")}
+              className={`border px-3 py-2 text-sm font-semibold transition ${
+                method === "Mpesa"
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border-soft text-muted hover:border-accent"
+              }`}
+            >
+              M-Pesa
+            </button>
           </div>
-        ) : null}
+        </div>
+
+        {method === "Mpesa" ? (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted">Customer M-Pesa phone</span>
+            <input
+              inputMode="numeric"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="2547XXXXXXXX"
+              className="border border-border-soft bg-background px-3 py-2 text-base outline-none focus:border-accent"
+            />
+            {phone.trim() !== "" && !phoneValid ? (
+              <span className="text-xs text-danger">
+                Use the format 2547XXXXXXXX.
+              </span>
+            ) : null}
+          </label>
+        ) : (
+          <p className="text-sm text-muted">
+            Charge the card on the terminal, then confirm below to record the
+            sale.
+          </p>
+        )}
 
         <button
           type="button"
           onClick={completeSale}
-          disabled={pending || lines.length === 0}
+          disabled={
+            pending ||
+            lines.length === 0 ||
+            (method === "Mpesa" && !phoneValid)
+          }
           className="bg-success px-4 py-3 font-bold text-black transition hover:opacity-90 disabled:opacity-50"
         >
-          {pending ? "Processing…" : "Complete cash sale"}
+          {pending
+            ? "Processing…"
+            : method === "Card"
+              ? "Charge card"
+              : "Send M-Pesa request"}
         </button>
         {lines.length > 0 ? (
           <button

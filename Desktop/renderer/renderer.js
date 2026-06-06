@@ -5,6 +5,7 @@
 // ---------------------------------------------------------------------------
 let lines = []; // { variant, quantity }
 let status = { online: false, loggedIn: false, pending: 0, cacheSize: 0 };
+let method = "Card"; // "Card" | "Mpesa"
 let busy = false;
 
 const $ = (id) => document.getElementById(id);
@@ -94,12 +95,19 @@ function renderLines() {
 }
 
 function renderChange() {
-  const cash = parseFloat($("cash").value);
-  const has = !Number.isNaN(cash) && cash > 0;
-  const change = has ? cash - total() : 0;
-  $("changeRow").hidden = !has;
-  $("change").textContent = fmt(Math.max(0, change), currency());
-  $("completeBtn").disabled = busy || lines.length === 0 || (has && cash < total());
+  const phoneValid = /^(2547|2541)\d{8}$/.test($("phone").value.trim());
+  const mpesa = method === "Mpesa";
+  $("methodCard").classList.toggle("active", !mpesa);
+  $("methodMpesa").classList.toggle("active", mpesa);
+  $("phoneField").hidden = !mpesa;
+  $("cardHint").hidden = mpesa;
+  $("completeBtn").textContent = busy
+    ? "Processing…"
+    : mpesa
+      ? "Send M-Pesa request"
+      : "Charge card";
+  $("completeBtn").disabled =
+    busy || lines.length === 0 || (mpesa && !phoneValid);
 }
 
 function handleLineAction(index, act) {
@@ -154,13 +162,16 @@ async function addBySku() {
 
 async function completeSale() {
   if (lines.length === 0 || busy) return;
+  if (method === "Mpesa" && !/^(2547|2541)\d{8}$/.test($("phone").value.trim())) {
+    return flashScanError("Enter the customer's M-Pesa phone as 2547XXXXXXXX.");
+  }
   setBusy(true);
   clearMessages();
 
-  const cashVal = $("cash").value;
   const res = await window.pos.createSale({
     items: lines.map((l) => ({ variant: l.variant, quantity: l.quantity })),
-    cashTendered: cashVal === "" ? null : cashVal,
+    method,
+    customerPhone: method === "Mpesa" ? $("phone").value.trim() : null,
   });
   setBusy(false);
 
@@ -169,19 +180,22 @@ async function completeSale() {
     return flashScanError(res.error || "Could not complete the sale.");
   }
 
-  showReceipt(res.result, !!res.queued);
+  showReceipt(res.result);
   lines = [];
-  $("cash").value = "";
+  $("phone").value = "";
 }
 
-function showReceipt(result, queued) {
-  $("receiptTag").textContent = queued ? "Queued" : "Paid";
-  $("receiptTag").className = `tag ${queued ? "queued" : ""}`;
+function showReceipt(result) {
+  const status = result.status || "Paid";
+  const cls = status === "Paid" ? "" : status === "Pending" ? "pending" : "queued";
+  $("receiptTag").textContent = status;
+  $("receiptTag").className = `tag ${cls}`;
+  $("receiptHeading").textContent =
+    status === "Pending" ? "Awaiting M-Pesa" : "Sale complete";
   $("receiptOrder").textContent = `Order ${result.orderNumber}`;
   $("rTotal").textContent = fmt(result.total, result.currency);
-  $("rTendered").textContent = result.amountTendered != null ? fmt(result.amountTendered, result.currency) : "—";
-  $("rChange").textContent = result.change != null ? fmt(result.change, result.currency) : "—";
-  $("offlineNote").hidden = !queued;
+  $("rMethod").textContent = result.method || method;
+  $("receiptMessage").textContent = result.message || "";
   show("receiptView");
 }
 
@@ -202,8 +216,7 @@ async function doLogin() {
 // ---------------------------------------------------------------------------
 function setBusy(v) {
   busy = v;
-  $("completeBtn").disabled = v || lines.length === 0;
-  $("completeBtn").textContent = v ? "Processing…" : "Complete cash sale";
+  renderChange();
 }
 function setScanBusy(v) {
   $("addBtn").disabled = v;
@@ -225,9 +238,11 @@ function clearMessages() {
 function bind() {
   $("addBtn").addEventListener("click", addBySku);
   $("sku").addEventListener("keydown", (e) => { if (e.key === "Enter") addBySku(); });
-  $("cash").addEventListener("input", renderChange);
+  $("methodCard").addEventListener("click", () => { method = "Card"; renderChange(); });
+  $("methodMpesa").addEventListener("click", () => { method = "Mpesa"; renderChange(); });
+  $("phone").addEventListener("input", renderChange);
   $("completeBtn").addEventListener("click", completeSale);
-  $("clearBtn").addEventListener("click", () => { lines = []; renderLines(); });
+  $("clearBtn").addEventListener("click", () => { lines = []; $("phone").value = ""; renderLines(); });
   $("loginBtn").addEventListener("click", doLogin);
   $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
   $("logoutBtn").addEventListener("click", async () => { await window.pos.logout(); show("loginView"); });

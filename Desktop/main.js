@@ -160,7 +160,8 @@ async function syncOutbox() {
           productVariantId: i.variant.variantId,
           quantity: i.quantity,
         })),
-        cashTendered: sale.cashTendered ?? null,
+        method: "Card", // only card sales are ever queued offline
+        customerPhone: null,
         customerEmail: null,
       };
       const res = await api.createSale(apiUrl(), auth().token, payload);
@@ -269,24 +270,27 @@ function registerIpc() {
     };
   });
 
-  ipcMain.handle("pos:createSale", async (_e, { items, cashTendered }) => {
+  ipcMain.handle("pos:createSale", async (_e, { items, method, customerPhone }) => {
     if (!Array.isArray(items) || items.length === 0) {
       return { ok: false, error: "No items to sell." };
+    }
+    if (method !== "Card" && method !== "Mpesa") {
+      return { ok: false, error: "Choose Card or M-Pesa." };
     }
 
     const total = items.reduce((sum, i) => sum + i.variant.price * i.quantity, 0);
     const currency = items[0].variant.currency || "KES";
-    const tendered = cashTendered == null || cashTendered === "" ? null : Number(cashTendered);
-    if (tendered != null && tendered < total) {
-      return { ok: false, error: "Cash tendered is less than the total." };
+    const phone = (customerPhone || "").trim();
+    if (method === "Mpesa" && !/^(2547|2541)\d{8}$/.test(phone)) {
+      return { ok: false, error: "Enter the customer's M-Pesa phone as 2547XXXXXXXX." };
     }
-    const change = tendered != null ? Number((tendered - total).toFixed(2)) : null;
 
     // Try online first if we can.
     if (online && isLoggedIn()) {
       const payload = {
         items: items.map((i) => ({ productVariantId: i.variant.variantId, quantity: i.quantity })),
-        cashTendered: tendered,
+        method,
+        customerPhone: method === "Mpesa" ? phone : null,
         customerEmail: null,
       };
       const res = await api.createSale(apiUrl(), auth().token, payload);
@@ -303,22 +307,34 @@ function registerIpc() {
       if (!res.network) {
         return { ok: false, error: res.error || "The server rejected the sale." };
       }
-      online = false; // fall through to offline queueing
+      online = false; // fall through to offline handling
       broadcastStatus();
     }
 
-    // Offline: queue the sale and reduce local stock optimistically.
+    // Offline: M-Pesa can't run without the server + provider.
+    if (method === "Mpesa") {
+      return { ok: false, offline: true, error: "Offline — M-Pesa needs a connection. Use Card or try again when online." };
+    }
+
+    // Offline card sale: queue it and reduce local stock optimistically.
     const localId = `OFF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     store.update("outbox", (q) => [
       ...q,
-      { localId, items, cashTendered: tendered, createdAt: new Date().toISOString(), status: "queued" },
+      { localId, items, method: "Card", createdAt: new Date().toISOString(), status: "queued" },
     ]);
     for (const i of items) adjustCacheStock(i.variant.variantId, -i.quantity);
     broadcastStatus();
     return {
       ok: true,
       queued: true,
-      result: { orderNumber: localId, total, currency, amountTendered: tendered, change },
+      result: {
+        orderNumber: localId,
+        total,
+        currency,
+        method: "Card",
+        status: "Queued",
+        message: "Saved offline — will sync to the server when reconnected.",
+      },
     };
   });
 }

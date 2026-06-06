@@ -2,6 +2,7 @@ using MediatR;
 using NikaFitness.Application.Catalog.Commands;
 using NikaFitness.Application.Pos.Commands;
 using NikaFitness.Application.Pos.Queries;
+using NikaFitness.Domain.Payments;
 
 namespace NikaFitness.Api.Endpoints;
 
@@ -12,7 +13,8 @@ public static class AdminEndpoints
 
     public sealed record PosSaleRequest(
         IReadOnlyList<PosSaleLine> Items,
-        decimal? CashTendered,
+        string Method,
+        string? CustomerPhone,
         string? CustomerEmail);
 
     public static IEndpointRouteBuilder MapAdminEndpoints(this IEndpointRouteBuilder app)
@@ -44,12 +46,22 @@ public static class AdminEndpoints
                 : Results.Ok(variant);
         });
 
-        // Ring up an in-store cash sale (settles immediately).
+        // Ring up an in-store sale paid by Card or M-Pesa (cash is not accepted).
         group.MapPost("/pos/sales", async (PosSaleRequest request, ISender sender) =>
         {
+            if (!Enum.TryParse<PaymentMethod>(request.Method, ignoreCase: true, out var method)
+                || method is not (PaymentMethod.Card or PaymentMethod.Mpesa))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["method"] = ["Payment method must be 'Card' or 'Mpesa'."]
+                });
+            }
+
             var result = await sender.Send(new CreatePosSaleCommand(
                 request.Items.Select(i => new PosLineInput(i.ProductVariantId, i.Quantity)).ToList(),
-                request.CashTendered,
+                method,
+                request.CustomerPhone,
                 request.CustomerEmail));
 
             return Results.Ok(result);

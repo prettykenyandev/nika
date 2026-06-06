@@ -60,6 +60,11 @@ body {
   padding: 1.5rem;
 }
 
+/* The `hidden` attribute must beat the display rules below (.register uses grid). */
+[hidden] {
+  display: none !important;
+}
+
 /* Cards (login / receipt) */
 .card {
   max-width: 420px;
@@ -160,12 +165,25 @@ button { font-size: 0.95rem; cursor: pointer; border-radius: 9px; }
 .summary .change { color: var(--success); font-weight: 700; }
 .cash { margin: 0.4rem 0; }
 
+/* Payment method toggle */
+.methods .label { color: var(--muted); font-size: 0.85rem; display: block; margin-bottom: 0.4rem; }
+.method-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.method {
+  padding: 0.55rem; font-weight: 700; font-size: 0.9rem;
+  background: var(--surface-2); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.method.active { color: var(--accent); border-color: var(--accent); background: rgba(56, 189, 248, 0.1); }
+.phone { margin: 0.2rem 0; }
+.hint { color: var(--muted); font-size: 0.82rem; margin: 0.2rem 0; }
+
 /* Receipt */
 .receipt .tag {
   display: inline-block; padding: 0.2rem 0.7rem; border-radius: 999px;
   background: rgba(52, 211, 153, 0.15); color: var(--success);
   font-weight: 800; font-size: 0.75rem; letter-spacing: 0.05em;
 }
+.receipt .tag.pending { background: rgba(56, 189, 248, 0.15); color: var(--accent); }
 .receipt .tag.queued { background: rgba(251, 191, 36, 0.15); color: var(--warn); }
 .receipt .order { color: var(--muted); }
 .receipt dl { margin: 1.2rem 0; }
@@ -175,4 +193,4 @@ button { font-size: 0.95rem; cursor: pointer; border-radius: 9px; }
 }
 .receipt dt { color: var(--muted); }
 .receipt dd { margin: 0; font-weight: 700; }
-.offline-note { font-size: 0.82rem; }
+.receipt-msg { font-size: 0.85rem; }

@@ -35,7 +35,8 @@ export async function lookupSkuAction(sku: string): Promise<LookupSkuResult> {
 
 export interface PosSaleInput {
   items: { productVariantId: string; quantity: number }[];
-  cashTendered: number | null;
+  method: "Card" | "Mpesa";
+  customerPhone: string | null;
 }
 
 export interface PosSaleState {
@@ -43,7 +44,7 @@ export interface PosSaleState {
   error?: string;
 }
 
-/** Ring up an in-store cash sale (settles immediately and decrements stock). */
+/** Ring up an in-store Card or M-Pesa sale (reserves stock and places the order). */
 export async function createPosSaleAction(
   input: PosSaleInput,
 ): Promise<PosSaleState> {
@@ -60,7 +61,8 @@ export async function createPosSaleAction(
     },
     body: JSON.stringify({
       items: input.items,
-      cashTendered: input.cashTendered,
+      method: input.method,
+      customerPhone: input.customerPhone,
       customerEmail: null,
     }),
     cache: "no-store",

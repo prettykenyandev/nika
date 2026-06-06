@@ -10,8 +10,8 @@ export default function PosPage() {
       <div>
         <h1 className="text-2xl font-bold sm:text-3xl">Point of sale</h1>
         <p className="mt-1 text-sm text-muted">
-          Scan or type a SKU to add items, take cash, and the stock updates
-          automatically.
+          Scan or type a SKU to add items, take a Card or M-Pesa payment, and the
+          stock updates automatically.
         </p>
       </div>
       <PosTerminal />

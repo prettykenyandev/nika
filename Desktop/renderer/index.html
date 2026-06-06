@@ -51,11 +51,21 @@
       <aside class="summary">
         <div class="row"><span>Items</span><span id="itemCount">0</span></div>
         <div class="row total"><span>Total</span><span id="total">Ksh 0</span></div>
-        <label class="cash">Cash tendered (optional)
-          <input id="cash" type="number" min="0" step="0.01" placeholder="e.g. 1000" />
+
+        <div class="methods">
+          <span class="label">Payment method</span>
+          <div class="method-toggle">
+            <button type="button" class="method active" id="methodCard" data-method="Card">Card</button>
+            <button type="button" class="method" id="methodMpesa" data-method="Mpesa">M-Pesa</button>
+          </div>
+        </div>
+
+        <label class="phone" id="phoneField" hidden>Customer M-Pesa phone
+          <input id="phone" type="text" inputmode="numeric" placeholder="2547XXXXXXXX" />
         </label>
-        <div class="row change" id="changeRow" hidden><span>Change</span><span id="change">Ksh 0</span></div>
-        <button class="success" id="completeBtn" type="button" disabled>Complete cash sale</button>
+        <p class="hint" id="cardHint">Charge the card on the terminal, then confirm to record the sale.</p>
+
+        <button class="success" id="completeBtn" type="button" disabled>Charge card</button>
         <button class="ghost-btn" id="clearBtn" type="button" hidden>Clear sale</button>
       </aside>
     </main>
@@ -64,16 +74,13 @@
     <main class="view" id="receiptView" hidden>
       <div class="card receipt">
         <p class="tag" id="receiptTag">Paid</p>
-        <h2>Sale complete</h2>
+        <h2 id="receiptHeading">Sale complete</h2>
         <p class="order" id="receiptOrder"></p>
         <dl>
           <div><dt>Total</dt><dd id="rTotal"></dd></div>
-          <div><dt>Cash tendered</dt><dd id="rTendered"></dd></div>
-          <div><dt>Change due</dt><dd id="rChange"></dd></div>
+          <div><dt>Payment</dt><dd id="rMethod"></dd></div>
         </dl>
-        <p class="muted offline-note" id="offlineNote" hidden>
-          Queued offline — it will sync automatically when the server is reachable.
-        </p>
+        <p class="muted receipt-msg" id="receiptMessage"></p>
         <button class="primary" id="newSaleBtn" type="button">New sale</button>
       </div>
     </main>

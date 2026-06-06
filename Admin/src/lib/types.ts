@@ -76,7 +76,8 @@ export interface PosSaleResult {
   orderNumber: string;
   total: number;
   currency: string;
-  amountTendered: number | null;
-  change: number | null;
-  paidAtUtc: string;
+  method: string;
+  status: string;
+  message: string;
+  paidAtUtc: string | null;
 }
