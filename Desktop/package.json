@@ -1,0 +1,31 @@
+{
+  "name": "nika-pos-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nika Fitness standalone point-of-sale register (Electron). Offline-first SKU cache + cash sales outbox that syncs to the Nika API.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "local.nikafitness.pos",
+    "productName": "Nika POS",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**",
+      "renderer/**"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.7.6",
+    "electron-builder": "^24.13.3"
+  }
+}

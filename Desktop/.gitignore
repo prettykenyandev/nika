@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local register state (cached catalog, auth token, queued offline sales)
+data/
+pos-data.json

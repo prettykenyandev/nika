@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline';" />
+    <title>Nika POS</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">NIKA<span>POS</span></div>
+      <div class="status" id="statusBar">
+        <span class="pill" id="netPill">Connecting…</span>
+        <span class="pill ghost" id="pendingPill" hidden></span>
+        <span class="pill ghost" id="cachePill"></span>
+        <span class="user" id="userLabel"></span>
+        <button class="link" id="logoutBtn" hidden>Sign out</button>
+      </div>
+    </header>
+
+    <!-- LOGIN -->
+    <main class="view" id="loginView" hidden>
+      <div class="card login">
+        <h1>Register sign in</h1>
+        <p class="muted">Sign in with a till/admin account to start a shift.</p>
+        <label>Email<input id="email" type="email" value="admin@nikafitness.local" autocomplete="off" /></label>
+        <label>Password<input id="password" type="password" value="" autocomplete="off" /></label>
+        <details class="settings">
+          <summary>Server settings</summary>
+          <label>API URL<input id="apiUrl" type="text" /></label>
+          <button class="ghost-btn" id="saveApiUrl" type="button">Save</button>
+        </details>
+        <button class="primary" id="loginBtn" type="button">Sign in</button>
+        <p class="error" id="loginError" hidden></p>
+      </div>
+    </main>
+
+    <!-- REGISTER -->
+    <main class="view register" id="registerView" hidden>
+      <section class="scan">
+        <div class="scanrow">
+          <input id="sku" type="text" placeholder="Scan or type a SKU, then Enter" autocomplete="off" />
+          <button class="primary" id="addBtn" type="button">Add</button>
+        </div>
+        <p class="notice" id="notice" hidden></p>
+        <p class="error" id="scanError" hidden></p>
+        <ul class="lines" id="lines"></ul>
+        <p class="empty" id="emptyLines">No items yet. Scan a product SKU to start a sale.</p>
+      </section>
+
+      <aside class="summary">
+        <div class="row"><span>Items</span><span id="itemCount">0</span></div>
+        <div class="row total"><span>Total</span><span id="total">Ksh 0</span></div>
+        <label class="cash">Cash tendered (optional)
+          <input id="cash" type="number" min="0" step="0.01" placeholder="e.g. 1000" />
+        </label>
+        <div class="row change" id="changeRow" hidden><span>Change</span><span id="change">Ksh 0</span></div>
+        <button class="success" id="completeBtn" type="button" disabled>Complete cash sale</button>
+        <button class="ghost-btn" id="clearBtn" type="button" hidden>Clear sale</button>
+      </aside>
+    </main>
+
+    <!-- RECEIPT -->
+    <main class="view" id="receiptView" hidden>
+      <div class="card receipt">
+        <p class="tag" id="receiptTag">Paid</p>
+        <h2>Sale complete</h2>
+        <p class="order" id="receiptOrder"></p>
+        <dl>
+          <div><dt>Total</dt><dd id="rTotal"></dd></div>
+          <div><dt>Cash tendered</dt><dd id="rTendered"></dd></div>
+          <div><dt>Change due</dt><dd id="rChange"></dd></div>
+        </dl>
+        <p class="muted offline-note" id="offlineNote" hidden>
+          Queued offline — it will sync automatically when the server is reachable.
+        </p>
+        <button class="primary" id="newSaleBtn" type="button">New sale</button>
+      </div>
+    </main>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
