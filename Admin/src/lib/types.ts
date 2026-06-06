@@ -58,3 +58,25 @@ export interface CreateProductInput {
   variants: VariantInput[];
   publish: boolean;
 }
+
+export interface PosVariant {
+  variantId: string;
+  sku: string;
+  variantName: string;
+  productId: string;
+  productName: string;
+  price: number;
+  currency: string;
+  stockQuantity: number;
+  imageUrl: string | null;
+}
+
+export interface PosSaleResult {
+  orderId: string;
+  orderNumber: string;
+  total: number;
+  currency: string;
+  amountTendered: number | null;
+  change: number | null;
+  paidAtUtc: string;
+}

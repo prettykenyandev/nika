@@ -34,6 +34,12 @@ export default async function RootLayout({
                   Dashboard
                 </Link>
                 <Link
+                  href="/pos"
+                  className="text-muted transition hover:text-accent"
+                >
+                  POS
+                </Link>
+                <Link
                   href="/products/new"
                   className="bg-accent-strong px-3 py-1.5 font-semibold text-white transition hover:bg-accent"
                 >
