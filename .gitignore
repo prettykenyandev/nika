@@ -1,0 +1,42 @@
+# ---- Node / Next.js ----
+node_modules/
+.next/
+out/
+build/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ---- Env files ----
+.env
+.env.*
+!.env.example
+
+# ---- .NET ----
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+artifacts/
+
+# ---- Aspire / DCP ----
+**/.aspire/
+*.received.*
+
+# ---- Logs ----
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
