@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  emailInvoiceAction,
+  getInvoicePdfAction,
   recordInvoicePaymentAction,
   sendInvoiceAction,
   voidInvoiceAction,
@@ -15,19 +17,35 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function downloadBase64Pdf(fileName: string, base64: string) {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function InvoiceActions({
   invoiceId,
   status,
   amountDue,
   currency,
+  customerEmail,
 }: {
   invoiceId: string;
   status: string;
   amountDue: number;
   currency: string;
+  customerEmail?: string | null;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const [amount, setAmount] = useState(amountDue > 0 ? String(amountDue) : "");
@@ -38,6 +56,36 @@ export function InvoiceActions({
   const canSend = status === "Draft";
   const canPay = status === "Sent" || status === "PartiallyPaid";
   const canVoid = status !== "Paid" && status !== "Void";
+
+  function downloadPdf() {
+    setError(null);
+    setNotice(null);
+    startTransition(async () => {
+      const res = await getInvoicePdfAction(invoiceId);
+      if (res.error || !res.base64 || !res.fileName) {
+        setError(res.error ?? "Could not generate the PDF.");
+        return;
+      }
+      downloadBase64Pdf(res.fileName, res.base64);
+    });
+  }
+
+  function emailInvoice() {
+    setError(null);
+    setNotice(null);
+    startTransition(async () => {
+      const res = await emailInvoiceAction(invoiceId, customerEmail);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setNotice(
+        customerEmail
+          ? `Invoice emailed to ${customerEmail}.`
+          : "Invoice queued for delivery.",
+      );
+    });
+  }
 
   function send() {
     setError(null);
@@ -83,6 +131,11 @@ export function InvoiceActions({
           {error}
         </p>
       ) : null}
+      {notice ? (
+        <p className="border border-accent/40 bg-accent/10 p-3 text-sm text-accent">
+          {notice}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         {canSend ? (
@@ -95,6 +148,22 @@ export function InvoiceActions({
             {pending ? "Working…" : "Send to customer"}
           </button>
         ) : null}
+        <button
+          type="button"
+          onClick={downloadPdf}
+          disabled={pending}
+          className="border border-border-soft px-4 py-2 text-sm text-muted transition hover:border-accent hover:text-accent disabled:opacity-50"
+        >
+          Download PDF
+        </button>
+        <button
+          type="button"
+          onClick={emailInvoice}
+          disabled={pending}
+          className="border border-border-soft px-4 py-2 text-sm text-muted transition hover:border-accent hover:text-accent disabled:opacity-50"
+        >
+          Email invoice
+        </button>
         {canVoid ? (
           <button
             type="button"

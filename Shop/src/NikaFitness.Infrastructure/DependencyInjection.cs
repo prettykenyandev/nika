@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NikaFitness.Application.Common.Interfaces;
 using NikaFitness.Infrastructure.Carts;
+using NikaFitness.Infrastructure.Documents;
+using NikaFitness.Infrastructure.Email;
 using NikaFitness.Infrastructure.Files;
 using NikaFitness.Infrastructure.Identity;
 using NikaFitness.Infrastructure.Payments.Mpesa;
@@ -43,6 +45,8 @@ public static class DependencyInjection
 
         services.AddScoped<IDocumentNumberGenerator, DocumentNumberGenerator>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
+        services.AddSingleton<IDocumentPdfService, QuestPdfDocumentService>();
+        services.AddScoped<IEmailSender, LoggingEmailSender>();
 
         AddMpesa(services, builder.Configuration);
 

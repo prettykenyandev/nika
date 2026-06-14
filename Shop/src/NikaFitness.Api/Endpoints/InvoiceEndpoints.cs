@@ -1,6 +1,8 @@
 using MediatR;
+using NikaFitness.Application.Common.Interfaces;
 using NikaFitness.Application.Receivables.Commands;
 using NikaFitness.Application.Receivables.Queries;
+using NikaFitness.Application.Settings.Queries;
 using NikaFitness.Domain.Receivables;
 
 namespace NikaFitness.Api.Endpoints;
@@ -34,6 +36,22 @@ public static class InvoiceEndpoints
 
         group.MapGet("/invoices/{id:guid}", async (Guid id, ISender sender) =>
             Results.Ok(await sender.Send(new GetInvoiceByIdQuery(id))));
+
+        group.MapGet("/invoices/{id:guid}/pdf", async (
+            Guid id, ISender sender, IDocumentPdfService pdf) =>
+        {
+            var invoice = await sender.Send(new GetInvoiceByIdQuery(id));
+            var company = await sender.Send(new GetCompanySettingsQuery());
+            var bytes = pdf.RenderInvoice(invoice, company);
+            return Results.File(bytes, "application/pdf", $"{invoice.InvoiceNumber}.pdf");
+        });
+
+        group.MapPost("/invoices/{id:guid}/email", async (
+            Guid id, EmailInvoiceRequest? body, ISender sender) =>
+        {
+            await sender.Send(new EmailInvoiceCommand(id, body?.Email));
+            return Results.NoContent();
+        });
 
         group.MapPost("/invoices", async (CreateInvoiceCommand command, ISender sender) =>
         {
@@ -75,6 +93,9 @@ public static class InvoiceEndpoints
 
 /// <summary>Request body for generating an invoice from an existing order.</summary>
 public sealed record CreateInvoiceFromOrderRequest(Guid OrderId, int? PaymentTermDays);
+
+/// <summary>Optional override recipient when emailing an invoice.</summary>
+public sealed record EmailInvoiceRequest(string? Email);
 
 /// <summary>Request body for recording a receipt against an invoice (id comes from the route).</summary>
 public sealed record RecordInvoicePaymentRequest(

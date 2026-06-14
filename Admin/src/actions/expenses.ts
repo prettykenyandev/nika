@@ -166,6 +166,25 @@ export interface ActionResult {
   success?: boolean;
 }
 
+export interface PdfResult {
+  error?: string;
+  fileName?: string;
+  base64?: string;
+}
+
+export async function getBillPdfAction(id: string): Promise<PdfResult> {
+  const headers = await authHeader();
+  if (!headers) return { error: SESSION_EXPIRED };
+
+  const res = await tryFetch(`/api/admin/bills/${id}/pdf`, { headers });
+  if (!res) return { error: NETWORK_ERROR };
+  if (res.status === 401) return { error: SESSION_EXPIRED };
+  if (!res.ok) return { error: await readProblem(res, "Failed to generate PDF") };
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  return { fileName: `bill-${id}.pdf`, base64: buffer.toString("base64") };
+}
+
 export async function approveBillAction(id: string): Promise<ActionResult> {
   return postBillAction(id, "approve", "Failed to approve bill");
 }

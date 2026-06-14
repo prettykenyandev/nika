@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   approveBillAction,
   cancelBillAction,
+  getBillPdfAction,
   recordBillPaymentAction,
 } from "@/actions/expenses";
 
@@ -13,6 +14,19 @@ const inputClass =
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function downloadBase64Pdf(fileName: string, base64: string) {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function BillActions({
@@ -58,6 +72,18 @@ export function BillActions({
     });
   }
 
+  function downloadPdf() {
+    setError(null);
+    startTransition(async () => {
+      const res = await getBillPdfAction(billId);
+      if (res.error || !res.base64 || !res.fileName) {
+        setError(res.error ?? "Could not generate the PDF.");
+        return;
+      }
+      downloadBase64Pdf(res.fileName, res.base64);
+    });
+  }
+
   function recordPayment(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -96,6 +122,14 @@ export function BillActions({
             {pending ? "Working…" : "Approve for payment"}
           </button>
         ) : null}
+        <button
+          type="button"
+          onClick={downloadPdf}
+          disabled={pending}
+          className="border border-border-soft px-4 py-2 text-sm text-muted transition hover:border-accent hover:text-accent disabled:opacity-50"
+        >
+          Download PDF
+        </button>
         {canCancel ? (
           <button
             type="button"

@@ -184,6 +184,45 @@ export async function recordInvoicePaymentAction(
   return { success: true };
 }
 
+export async function emailInvoiceAction(
+  id: string,
+  email?: string | null,
+): Promise<ActionResult> {
+  const headers = await authHeader();
+  if (!headers) return { error: SESSION_EXPIRED };
+
+  const res = await tryFetch(`/api/admin/invoices/${id}/email`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: clean(email ?? null) }),
+  });
+
+  if (!res) return { error: NETWORK_ERROR };
+  if (res.status === 401) return { error: SESSION_EXPIRED };
+  if (!res.ok) return { error: await readProblem(res, "Failed to email invoice") };
+
+  return { success: true };
+}
+
+export interface PdfResult {
+  error?: string;
+  fileName?: string;
+  base64?: string;
+}
+
+export async function getInvoicePdfAction(id: string): Promise<PdfResult> {
+  const headers = await authHeader();
+  if (!headers) return { error: SESSION_EXPIRED };
+
+  const res = await tryFetch(`/api/admin/invoices/${id}/pdf`, { headers });
+  if (!res) return { error: NETWORK_ERROR };
+  if (res.status === 401) return { error: SESSION_EXPIRED };
+  if (!res.ok) return { error: await readProblem(res, "Failed to generate PDF") };
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  return { fileName: `invoice-${id}.pdf`, base64: buffer.toString("base64") };
+}
+
 function clean(value: string | null): string | null {
   if (value === null) return null;
   const trimmed = value.trim();

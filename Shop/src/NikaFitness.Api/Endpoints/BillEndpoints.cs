@@ -1,6 +1,8 @@
 using MediatR;
+using NikaFitness.Application.Common.Interfaces;
 using NikaFitness.Application.Expenses.Commands;
 using NikaFitness.Application.Expenses.Queries;
+using NikaFitness.Application.Settings.Queries;
 using NikaFitness.Domain.Expenses;
 
 namespace NikaFitness.Api.Endpoints;
@@ -43,6 +45,15 @@ public static class BillEndpoints
 
         group.MapGet("/bills/{id:guid}", async (Guid id, ISender sender) =>
             Results.Ok(await sender.Send(new GetBillByIdQuery(id))));
+
+        group.MapGet("/bills/{id:guid}/pdf", async (
+            Guid id, ISender sender, IDocumentPdfService pdf) =>
+        {
+            var bill = await sender.Send(new GetBillByIdQuery(id));
+            var company = await sender.Send(new GetCompanySettingsQuery());
+            var bytes = pdf.RenderBill(bill, company);
+            return Results.File(bytes, "application/pdf", $"{bill.BillNumber}.pdf");
+        });
 
         group.MapPost("/bills", async (CreateBillCommand command, ISender sender) =>
         {

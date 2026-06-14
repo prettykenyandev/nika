@@ -140,6 +140,7 @@ export default async function InvoiceDetailPage({
               status={invoice.status}
               amountDue={invoice.amountDue}
               currency={invoice.currency}
+              customerEmail={invoice.customerEmail}
             />
           </section>
         </div>
