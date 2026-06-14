@@ -9,6 +9,17 @@ public static class AuthEndpoints
     public const string CustomerRole = "Customer";
     public const string AdminRole = "Admin";
 
+    // Finer-grained staff roles (Phase 5). Admin remains the superset for endpoint access today;
+    // these are assignable to staff and surfaced for future per-area policies.
+    public const string OwnerRole = "Owner";
+    public const string ManagerRole = "Manager";
+    public const string CashierRole = "Cashier";
+    public const string AccountantRole = "Accountant";
+
+    /// <summary>Roles that represent internal staff (everything except the storefront Customer role).</summary>
+    public static readonly string[] StaffRoles =
+        { OwnerRole, AdminRole, ManagerRole, CashierRole, AccountantRole };
+
     public sealed record RegisterRequest(string Email, string Password, string FullName);
     public sealed record LoginRequest(string Email, string Password);
     public sealed record AuthResponse(string Token, DateTime ExpiresAtUtc, string Email, string FullName, string[] Roles);

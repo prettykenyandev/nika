@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using NikaFitness.Application.Common.Interfaces;
+using NikaFitness.Domain.Auditing;
 using NikaFitness.Domain.Catalog;
 using NikaFitness.Domain.Common;
+using NikaFitness.Domain.Customers;
 using NikaFitness.Domain.Expenses;
 using NikaFitness.Domain.Orders;
 using NikaFitness.Domain.Payments;
+using NikaFitness.Domain.Purchasing;
 using NikaFitness.Domain.Receivables;
 using NikaFitness.Domain.Sequences;
 using NikaFitness.Domain.Settings;
@@ -30,6 +33,10 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
     public DbSet<Bill> Bills => Set<Bill>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Vendor> Vendors => Set<Vendor>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

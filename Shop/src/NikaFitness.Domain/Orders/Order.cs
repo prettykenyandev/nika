@@ -107,6 +107,14 @@ public sealed class Order : AggregateRoot
         Status = OrderStatus.Fulfilled;
     }
 
+    /// <summary>Associates this order with a durable customer record.</summary>
+    public void AssignCustomer(Guid customerId)
+    {
+        if (customerId == Guid.Empty)
+            throw new DomainException("A valid customer id is required.");
+        CustomerId = customerId;
+    }
+
     private void EnsureEditable()
     {
         if (Status is not OrderStatus.PendingPayment)

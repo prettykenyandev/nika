@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using NikaFitness.Domain.Auditing;
 using NikaFitness.Domain.Catalog;
+using NikaFitness.Domain.Customers;
 using NikaFitness.Domain.Expenses;
 using NikaFitness.Domain.Orders;
 using NikaFitness.Domain.Payments;
+using NikaFitness.Domain.Purchasing;
 using NikaFitness.Domain.Receivables;
 using NikaFitness.Domain.Settings;
 
@@ -22,6 +25,10 @@ public interface IApplicationDbContext
     DbSet<ExpenseCategory> ExpenseCategories { get; }
     DbSet<Bill> Bills { get; }
     DbSet<Invoice> Invoices { get; }
+    DbSet<Vendor> Vendors { get; }
+    DbSet<PurchaseOrder> PurchaseOrders { get; }
+    DbSet<Customer> Customers { get; }
+    DbSet<AuditLogEntry> AuditLog { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

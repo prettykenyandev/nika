@@ -98,6 +98,12 @@ app.MapAdminEndpoints();
 app.MapSettingsEndpoints();
 app.MapBillEndpoints();
 app.MapInvoiceEndpoints();
+app.MapVendorEndpoints();
+app.MapPurchaseOrderEndpoints();
+app.MapCustomerEndpoints();
+app.MapReportsEndpoints();
+app.MapStaffEndpoints();
+app.MapAuditEndpoints();
 app.MapPaymentWebhookEndpoints();
 
 await app.SeedDatabaseAsync();

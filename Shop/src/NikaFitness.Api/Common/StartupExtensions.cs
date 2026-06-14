@@ -20,7 +20,16 @@ public static class StartupExtensions
         await db.Database.MigrateAsync();
 
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-        foreach (var role in new[] { AuthEndpoints.AdminRole, AuthEndpoints.CustomerRole })
+        var roles = new[]
+        {
+            AuthEndpoints.AdminRole,
+            AuthEndpoints.CustomerRole,
+            AuthEndpoints.OwnerRole,
+            AuthEndpoints.ManagerRole,
+            AuthEndpoints.CashierRole,
+            AuthEndpoints.AccountantRole
+        };
+        foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
                 await roleManager.CreateAsync(new IdentityRole<Guid>(role));
