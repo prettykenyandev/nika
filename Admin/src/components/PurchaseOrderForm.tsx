@@ -2,24 +2,29 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createInvoiceAction } from "@/actions/invoices";
+import { createPurchaseOrderAction } from "@/actions/purchaseOrders";
 import { formatMoney } from "@/lib/format";
+import type { VariantOptionDto, VendorSummaryDto } from "@/lib/types";
 
 const inputClass =
   "w-full border border-border-soft bg-surface-2 px-3 py-2 text-sm outline-none focus:border-accent";
 
 interface LineRow {
+  productVariantId: string;
   description: string;
+  sku: string;
   quantity: string;
-  unitPrice: string;
+  unitCost: string;
   taxPercent: string;
 }
 
 function emptyLine(defaultTax: number): LineRow {
   return {
+    productVariantId: "",
     description: "",
+    sku: "",
     quantity: "1",
-    unitPrice: "",
+    unitCost: "",
     taxPercent: String(defaultTax),
   };
 }
@@ -34,24 +39,22 @@ function addDaysIso(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function InvoiceForm({
+export function PurchaseOrderForm({
+  vendors,
+  variants,
   defaultCurrency,
   defaultTaxPercent,
-  customerId,
-  defaultCustomerName = "",
-  defaultCustomerEmail = "",
 }: {
+  vendors: VendorSummaryDto[];
+  variants: VariantOptionDto[];
   defaultCurrency: string;
   defaultTaxPercent: number;
-  customerId?: string | null;
-  defaultCustomerName?: string;
-  defaultCustomerEmail?: string;
 }) {
   const router = useRouter();
-  const [customerName, setCustomerName] = useState(defaultCustomerName);
-  const [customerEmail, setCustomerEmail] = useState(defaultCustomerEmail);
-  const [issueDate, setIssueDate] = useState(todayIso());
-  const [dueDate, setDueDate] = useState(addDaysIso(14));
+  const [vendorId, setVendorId] = useState("");
+  const [orderDate, setOrderDate] = useState(todayIso());
+  const [expectedDate, setExpectedDate] = useState(addDaysIso(7));
+  const [currency, setCurrency] = useState(defaultCurrency);
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<LineRow[]>([emptyLine(defaultTaxPercent)]);
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +65,29 @@ export function InvoiceForm({
       prev.map((l, i) => (i === index ? { ...l, [field]: value } : l)),
     );
   }
+
+  function chooseVariant(index: number, variantId: string) {
+    const variant = variants.find((v) => v.variantId === variantId);
+    setLines((prev) =>
+      prev.map((l, i) =>
+        i === index
+          ? {
+              ...l,
+              productVariantId: variantId,
+              description: variant ? variant.label : l.description,
+              sku: variant ? variant.sku : "",
+              unitCost: variant ? String(variant.price) : l.unitCost,
+            }
+          : l,
+      ),
+    );
+    if (variant?.currency) setCurrency(variant.currency);
+  }
+
   function addLine() {
     setLines((prev) => [...prev, emptyLine(defaultTaxPercent)]);
   }
+
   function removeLine(index: number) {
     setLines((prev) => prev.filter((_, i) => i !== index));
   }
@@ -74,9 +97,9 @@ export function InvoiceForm({
     let tax = 0;
     for (const l of lines) {
       const qty = Number(l.quantity) || 0;
-      const price = Number(l.unitPrice) || 0;
+      const cost = Number(l.unitCost) || 0;
       const rate = l.taxPercent === "" ? 0 : Number(l.taxPercent) || 0;
-      const lineNet = qty * price;
+      const lineNet = qty * cost;
       net += lineNet;
       tax += (lineNet * rate) / 100;
     }
@@ -87,26 +110,26 @@ export function InvoiceForm({
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await createInvoiceAction({
-        customerId: customerId ?? null,
-        customerName,
-        customerEmail: customerEmail || null,
-        issueDate,
-        dueDate,
-        currency: defaultCurrency,
+      const res = await createPurchaseOrderAction({
+        vendorId,
+        orderDate,
+        expectedDate: expectedDate || null,
+        currency,
         notes,
         lines: lines.map((l) => ({
+          productVariantId: l.productVariantId || null,
           description: l.description,
+          sku: l.sku || null,
           quantity: Number(l.quantity),
-          unitPrice: Number(l.unitPrice),
+          unitCost: Number(l.unitCost),
           taxPercent: l.taxPercent === "" ? null : Number(l.taxPercent),
         })),
       });
       if (res.error || !res.id) {
-        setError(res.error ?? "Could not create invoice.");
+        setError(res.error ?? "Could not create purchase order.");
         return;
       }
-      router.push(`/invoices/${res.id}`);
+      router.push(`/purchase-orders/${res.id}`);
     });
   }
 
@@ -118,62 +141,59 @@ export function InvoiceForm({
         </p>
       ) : null}
 
-      {/* Customer & dates */}
       <section className="flex flex-col gap-4 border border-border-soft bg-surface p-4 sm:p-6">
-        <h2 className="text-lg font-semibold">Customer &amp; dates</h2>
+        <h2 className="text-lg font-semibold">Vendor &amp; dates</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted">Customer name *</span>
-            <input
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="e.g. Jane Doe"
+            <span className="text-muted">Vendor *</span>
+            <select
+              value={vendorId}
+              onChange={(e) => setVendorId(e.target.value)}
               className={inputClass}
               required
-            />
+            >
+              <option value="">Choose a vendor</option>
+              {vendors.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted">Customer email</span>
+            <span className="text-muted">Currency</span>
             <input
-              type="email"
-              value={customerEmail}
-              onChange={(e) => setCustomerEmail(e.target.value)}
-              placeholder="jane@example.com"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
               className={inputClass}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted">Issue date *</span>
+            <span className="text-muted">Order date *</span>
             <input
               type="date"
-              value={issueDate}
-              onChange={(e) => setIssueDate(e.target.value)}
+              value={orderDate}
+              onChange={(e) => setOrderDate(e.target.value)}
               className={inputClass}
               required
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted">Due date *</span>
+            <span className="text-muted">Expected date</span>
             <input
               type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              value={expectedDate}
+              onChange={(e) => setExpectedDate(e.target.value)}
               className={inputClass}
-              required
             />
           </label>
         </div>
       </section>
 
-      {/* Line items */}
       <section className="flex flex-col gap-4 border border-border-soft bg-surface p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Line items</h2>
-          <button
-            type="button"
-            onClick={addLine}
-            className="text-sm text-accent underline"
-          >
+          <button type="button" onClick={addLine} className="text-sm text-accent underline">
             + Add line
           </button>
         </div>
@@ -182,14 +202,37 @@ export function InvoiceForm({
           {lines.map((l, i) => (
             <div
               key={i}
-              className="grid grid-cols-1 gap-3 border border-border-soft bg-surface-2 p-3 sm:grid-cols-2 lg:grid-cols-[1.8fr_0.7fr_0.9fr_0.7fr_auto] lg:items-end"
+              className="grid grid-cols-1 gap-3 border border-border-soft bg-surface-2 p-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_1.4fr_0.8fr_0.7fr_0.9fr_0.7fr_auto] lg:items-end"
             >
+              <label className="flex flex-col gap-1 text-xs">
+                <span className="text-muted">Product</span>
+                <select
+                  value={l.productVariantId}
+                  onChange={(e) => chooseVariant(i, e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Custom line</option>
+                  {variants.map((v) => (
+                    <option key={v.variantId} value={v.variantId}>
+                      {v.sku} — {v.label} ({v.stockQuantity} on hand)
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="flex flex-col gap-1 text-xs">
                 <span className="text-muted">Description</span>
                 <input
                   value={l.description}
                   onChange={(e) => updateLine(i, "description", e.target.value)}
-                  placeholder="What is being billed"
+                  placeholder="What is being ordered"
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs">
+                <span className="text-muted">SKU</span>
+                <input
+                  value={l.sku}
+                  onChange={(e) => updateLine(i, "sku", e.target.value)}
                   className={inputClass}
                 />
               </label>
@@ -206,14 +249,14 @@ export function InvoiceForm({
                 />
               </label>
               <label className="flex flex-col gap-1 text-xs">
-                <span className="text-muted">Unit price</span>
+                <span className="text-muted">Unit cost</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   inputMode="decimal"
-                  value={l.unitPrice}
-                  onChange={(e) => updateLine(i, "unitPrice", e.target.value)}
+                  value={l.unitCost}
+                  onChange={(e) => updateLine(i, "unitCost", e.target.value)}
                   placeholder="0.00"
                   className={inputClass}
                 />
@@ -247,26 +290,16 @@ export function InvoiceForm({
         </div>
 
         <div className="flex flex-col items-end gap-1 border-t border-border-soft pt-3 text-sm">
-          <div className="flex w-full max-w-xs justify-between text-muted">
-            <span>Subtotal</span>
-            <span>{formatMoney(totals.net, defaultCurrency)}</span>
-          </div>
-          <div className="flex w-full max-w-xs justify-between text-muted">
-            <span>Tax</span>
-            <span>{formatMoney(totals.tax, defaultCurrency)}</span>
-          </div>
-          <div className="flex w-full max-w-xs justify-between font-semibold">
-            <span>Total</span>
-            <span>{formatMoney(totals.total, defaultCurrency)}</span>
-          </div>
+          <Row label="Subtotal" value={formatMoney(totals.net, currency)} />
+          <Row label="Tax" value={formatMoney(totals.tax, currency)} />
+          <Row label="Total" value={formatMoney(totals.total, currency)} strong />
         </div>
       </section>
 
-      {/* Notes */}
       <section className="flex flex-col gap-4 border border-border-soft bg-surface p-4 sm:p-6">
         <h2 className="text-lg font-semibold">Notes</h2>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted">Notes (shown on the invoice)</span>
+          <span className="text-muted">Internal notes</span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -282,9 +315,18 @@ export function InvoiceForm({
           disabled={pending}
           className="bg-accent-strong px-6 py-3 font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "Saving…" : "Create invoice"}
+          {pending ? "Saving…" : "Create purchase order"}
         </button>
       </div>
     </form>
+  );
+}
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={`flex w-full max-w-xs justify-between ${strong ? "font-semibold" : "text-muted"}`}>
+      <span>{label}</span>
+      <span>{value}</span>
+    </div>
   );
 }

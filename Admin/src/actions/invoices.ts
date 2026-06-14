@@ -98,7 +98,7 @@ export async function createInvoiceAction(
       dueDate: input.dueDate,
       currency: clean(input.currency),
       notes: clean(input.notes),
-      customerId: null,
+      customerId: input.customerId ?? null,
       lines: input.lines.map((l) => ({
         description: l.description.trim(),
         quantity: l.quantity,

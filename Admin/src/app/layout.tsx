@@ -52,6 +52,42 @@ export default async function RootLayout({
                   Invoices
                 </Link>
                 <Link
+                  href="/customers"
+                  className="text-muted transition hover:text-accent"
+                >
+                  Customers
+                </Link>
+                <Link
+                  href="/vendors"
+                  className="text-muted transition hover:text-accent"
+                >
+                  Vendors
+                </Link>
+                <Link
+                  href="/purchase-orders"
+                  className="text-muted transition hover:text-accent"
+                >
+                  Purchasing
+                </Link>
+                <Link
+                  href="/reports"
+                  className="text-muted transition hover:text-accent"
+                >
+                  Reports
+                </Link>
+                <Link
+                  href="/staff"
+                  className="text-muted transition hover:text-accent"
+                >
+                  Staff
+                </Link>
+                <Link
+                  href="/audit-log"
+                  className="text-muted transition hover:text-accent"
+                >
+                  Audit Log
+                </Link>
+                <Link
                   href="/settings"
                   className="text-muted transition hover:text-accent"
                 >

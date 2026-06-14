@@ -33,6 +33,7 @@ export async function readProblem(res: Response, fallback: string): Promise<stri
     const body = (await res.json()) as {
       detail?: string;
       title?: string;
+      error?: string;
       message?: string;
       errors?: Record<string, string[]>;
     };
@@ -41,6 +42,7 @@ export async function readProblem(res: Response, fallback: string): Promise<stri
       if (messages.length) return messages.join(" ");
     }
     if (body.detail) return body.detail;
+    if (body.error) return body.error;
     if (body.message) return body.message;
     if (body.title) return body.title;
   } catch {

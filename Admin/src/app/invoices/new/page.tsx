@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getCustomer } from "@/actions/customers";
 import { getCompanySettings } from "@/actions/settings";
 import { InvoiceForm } from "@/components/InvoiceForm";
 
@@ -6,8 +7,16 @@ export const metadata = {
   title: "New invoice — Nika Admin",
 };
 
-export default async function NewInvoicePage() {
-  const settings = await getCompanySettings();
+export default async function NewInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ customerId?: string }>;
+}) {
+  const params = await searchParams;
+  const [settings, customer] = await Promise.all([
+    getCompanySettings(),
+    params.customerId ? getCustomer(params.customerId) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -24,6 +33,9 @@ export default async function NewInvoicePage() {
       <InvoiceForm
         defaultCurrency={settings?.currency ?? "KES"}
         defaultTaxPercent={settings?.defaultTaxPercent ?? 16}
+        customerId={customer?.id ?? null}
+        defaultCustomerName={customer?.name ?? ""}
+        defaultCustomerEmail={customer?.email ?? ""}
       />
     </div>
   );
