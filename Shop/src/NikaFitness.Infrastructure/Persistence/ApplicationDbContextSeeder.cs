@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NikaFitness.Domain.Catalog;
+using NikaFitness.Domain.Settings;
 using NikaFitness.Domain.ValueObjects;
 using NikaFitness.Infrastructure.Persistence;
 
@@ -17,6 +18,12 @@ public sealed class ApplicationDbContextSeeder(
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         await db.Database.MigrateAsync(cancellationToken);
+
+        if (!await db.CompanySettings.AnyAsync(cancellationToken))
+        {
+            db.CompanySettings.Add(CompanySettings.CreateDefault());
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         if (await db.Categories.AnyAsync(cancellationToken))
             return;

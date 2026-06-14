@@ -76,6 +76,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors(StorefrontCors);
+
+// Serve uploaded files (receipts, logos, document assets) from a dedicated folder that
+// is guaranteed to exist, independent of the default wwwroot.
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+Directory.CreateDirectory(uploadsPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -84,6 +95,9 @@ app.MapCatalogEndpoints();
 app.MapCartEndpoints();
 app.MapOrderEndpoints();
 app.MapAdminEndpoints();
+app.MapSettingsEndpoints();
+app.MapBillEndpoints();
+app.MapInvoiceEndpoints();
 app.MapPaymentWebhookEndpoints();
 
 await app.SeedDatabaseAsync();

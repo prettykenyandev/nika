@@ -1,8 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { API_URL } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import {
+  NETWORK_ERROR,
+  SESSION_EXPIRED,
+  readProblem,
+  safeJson,
+  tryFetch,
+} from "@/lib/http";
 import type { CreateProductInput } from "@/lib/types";
 
 function toSlug(value: string): string {
@@ -23,24 +29,26 @@ export async function createCategoryAction(
   description: string | null,
 ): Promise<CreateCategoryResult> {
   const token = await getToken();
-  if (!token) return { error: "Your session has expired. Please log in again." };
+  if (!token) return { error: SESSION_EXPIRED };
 
   if (!name.trim()) return { error: "Category name is required." };
 
-  const res = await fetch(`${API_URL}/api/admin/categories`, {
+  const res = await tryFetch(`/api/admin/categories`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ name: name.trim(), description }),
-    cache: "no-store",
   });
 
-  if (res.status === 401) return { error: "Session expired. Please log in again." };
-  if (!res.ok) return { error: await readError(res, "Failed to create category") };
+  if (!res) return { error: NETWORK_ERROR };
+  if (res.status === 401) return { error: SESSION_EXPIRED };
+  if (!res.ok) return { error: await readProblem(res, "Failed to create category") };
 
-  const data = (await res.json()) as { id: string };
+  const data = await safeJson<{ id: string }>(res);
+  if (!data?.id) return { error: "The category was saved but the server returned no id." };
+
   revalidatePath("/products/new");
   return { id: data.id };
 }
@@ -54,7 +62,7 @@ export async function createProductAction(
   input: CreateProductInput,
 ): Promise<CreateProductState> {
   const token = await getToken();
-  if (!token) return { error: "Your session has expired. Please log in again." };
+  if (!token) return { error: SESSION_EXPIRED };
 
   if (!input.name.trim()) return { error: "Product name is required." };
   if (!input.description.trim()) return { error: "Description is required." };
@@ -84,7 +92,7 @@ export async function createProductAction(
     }
   }
 
-  const res = await fetch(`${API_URL}/api/admin/products`, {
+  const res = await tryFetch(`/api/admin/products`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -98,35 +106,17 @@ export async function createProductAction(
       variants,
       publish: input.publish,
     }),
-    cache: "no-store",
   });
 
-  if (res.status === 401) return { error: "Session expired. Please log in again." };
-  if (!res.ok) return { error: await readError(res, "Failed to create product") };
+  if (!res) return { error: NETWORK_ERROR };
+  if (res.status === 401) return { error: SESSION_EXPIRED };
+  if (!res.ok) return { error: await readProblem(res, "Failed to create product") };
 
-  const data = (await res.json()) as { id: string };
+  const data = await safeJson<{ id: string }>(res);
+  if (!data?.id) return { error: "The product was saved but the server returned no id." };
 
   // Refresh the dashboard so the new product (if published) appears.
   revalidatePath("/");
 
   return { success: { id: data.id, slug: toSlug(input.name), name: input.name.trim() } };
-}
-
-async function readError(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = (await res.json()) as {
-      detail?: string;
-      title?: string;
-      errors?: Record<string, string[]>;
-    };
-    if (body.errors) {
-      const messages = Object.values(body.errors).flat();
-      if (messages.length) return messages.join(" ");
-    }
-    if (body.detail) return body.detail;
-    if (body.title) return body.title;
-  } catch {
-    // ignore parse failures
-  }
-  return `${fallback} (${res.status}).`;
 }

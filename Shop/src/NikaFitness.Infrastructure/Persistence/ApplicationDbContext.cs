@@ -4,8 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using NikaFitness.Application.Common.Interfaces;
 using NikaFitness.Domain.Catalog;
 using NikaFitness.Domain.Common;
+using NikaFitness.Domain.Expenses;
 using NikaFitness.Domain.Orders;
 using NikaFitness.Domain.Payments;
+using NikaFitness.Domain.Receivables;
+using NikaFitness.Domain.Sequences;
+using NikaFitness.Domain.Settings;
 using NikaFitness.Infrastructure.Identity;
 
 namespace NikaFitness.Infrastructure.Persistence;
@@ -21,6 +25,11 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<CompanySettings> CompanySettings => Set<CompanySettings>();
+    public DbSet<NumberSequence> NumberSequences => Set<NumberSequence>();
+    public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
+    public DbSet<Bill> Bills => Set<Bill>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

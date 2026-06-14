@@ -1,8 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { API_URL } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import {
+  NETWORK_ERROR,
+  SESSION_EXPIRED,
+  readProblem,
+  safeJson,
+  tryFetch,
+} from "@/lib/http";
 import type { PosSaleResult, PosVariant } from "@/lib/types";
 
 export interface LookupSkuResult {
@@ -13,24 +19,26 @@ export interface LookupSkuResult {
 /** Resolve a single variant by SKU / scanned barcode for the till. */
 export async function lookupSkuAction(sku: string): Promise<LookupSkuResult> {
   const token = await getToken();
-  if (!token) return { error: "Your session has expired. Please log in again." };
+  if (!token) return { error: SESSION_EXPIRED };
 
   const trimmed = sku.trim();
   if (!trimmed) return { error: "Enter or scan a SKU." };
 
-  const res = await fetch(
-    `${API_URL}/api/admin/pos/lookup?sku=${encodeURIComponent(trimmed)}`,
+  const res = await tryFetch(
+    `/api/admin/pos/lookup?sku=${encodeURIComponent(trimmed)}`,
     {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      cache: "no-store",
     },
   );
 
-  if (res.status === 401) return { error: "Session expired. Please log in again." };
+  if (!res) return { error: NETWORK_ERROR };
+  if (res.status === 401) return { error: SESSION_EXPIRED };
   if (res.status === 404) return { error: `No product found for SKU “${trimmed}”.` };
-  if (!res.ok) return { error: await readError(res, "Lookup failed") };
+  if (!res.ok) return { error: await readProblem(res, "Lookup failed") };
 
-  return { variant: (await res.json()) as PosVariant };
+  const variant = await safeJson<PosVariant>(res);
+  if (!variant) return { error: "Lookup failed: the server returned an unexpected response." };
+  return { variant };
 }
 
 export interface PosSaleInput {
@@ -49,11 +57,11 @@ export async function createPosSaleAction(
   input: PosSaleInput,
 ): Promise<PosSaleState> {
   const token = await getToken();
-  if (!token) return { error: "Your session has expired. Please log in again." };
+  if (!token) return { error: SESSION_EXPIRED };
 
   if (!input.items.length) return { error: "Add at least one item to the sale." };
 
-  const res = await fetch(`${API_URL}/api/admin/pos/sales`, {
+  const res = await tryFetch(`/api/admin/pos/sales`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -65,35 +73,17 @@ export async function createPosSaleAction(
       customerPhone: input.customerPhone,
       customerEmail: null,
     }),
-    cache: "no-store",
   });
 
-  if (res.status === 401) return { error: "Session expired. Please log in again." };
-  if (!res.ok) return { error: await readError(res, "Sale could not be completed") };
+  if (!res) return { error: NETWORK_ERROR };
+  if (res.status === 401) return { error: SESSION_EXPIRED };
+  if (!res.ok) return { error: await readProblem(res, "Sale could not be completed") };
+
+  const result = await safeJson<PosSaleResult>(res);
+  if (!result) return { error: "The sale may not have completed: unexpected server response." };
 
   // Stock changed — refresh the inventory dashboard.
   revalidatePath("/");
 
-  return { result: (await res.json()) as PosSaleResult };
-}
-
-async function readError(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = (await res.json()) as {
-      detail?: string;
-      title?: string;
-      message?: string;
-      errors?: Record<string, string[]>;
-    };
-    if (body.errors) {
-      const messages = Object.values(body.errors).flat();
-      if (messages.length) return messages.join(" ");
-    }
-    if (body.detail) return body.detail;
-    if (body.message) return body.message;
-    if (body.title) return body.title;
-  } catch {
-    // ignore parse failures
-  }
-  return `${fallback} (${res.status}).`;
+  return { result };
 }

@@ -5,9 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NikaFitness.Application.Common.Interfaces;
 using NikaFitness.Infrastructure.Carts;
+using NikaFitness.Infrastructure.Files;
 using NikaFitness.Infrastructure.Identity;
 using NikaFitness.Infrastructure.Payments.Mpesa;
 using NikaFitness.Infrastructure.Persistence;
+using NikaFitness.Infrastructure.Sequences;
 
 namespace NikaFitness.Infrastructure;
 
@@ -38,6 +40,9 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         services.AddScoped<ICartStore, RedisCartStore>();
+
+        services.AddScoped<IDocumentNumberGenerator, DocumentNumberGenerator>();
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
 
         AddMpesa(services, builder.Configuration);
 
