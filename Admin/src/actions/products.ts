@@ -3,15 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { API_URL } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { buildCreateProductPayload, toSlug } from "@/lib/products";
 import type { CreateProductInput } from "@/lib/types";
-
-function toSlug(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 export interface CreateCategoryResult {
   id?: string;
@@ -56,33 +49,8 @@ export async function createProductAction(
   const token = await getToken();
   if (!token) return { error: "Your session has expired. Please log in again." };
 
-  if (!input.name.trim()) return { error: "Product name is required." };
-  if (!input.description.trim()) return { error: "Description is required." };
-  if (!input.categoryId) return { error: "Please choose a category." };
-
-  const imageUrls = input.imageUrls.map((u) => u.trim()).filter(Boolean);
-  const variants = input.variants
-    .map((v) => ({
-      sku: v.sku.trim(),
-      name: v.name.trim(),
-      price: Number(v.price),
-      stockQuantity: Math.trunc(Number(v.stockQuantity)),
-    }))
-    .filter((v) => v.sku || v.name);
-
-  if (variants.length === 0) {
-    return { error: "Add at least one variant (SKU, name, price, stock)." };
-  }
-  for (const v of variants) {
-    if (!v.sku) return { error: "Every variant needs a SKU." };
-    if (!v.name) return { error: `Variant ${v.sku} needs a name.` };
-    if (!Number.isFinite(v.price) || v.price <= 0) {
-      return { error: `Variant ${v.sku} needs a price greater than 0.` };
-    }
-    if (!Number.isFinite(v.stockQuantity) || v.stockQuantity < 0) {
-      return { error: `Variant ${v.sku} needs a stock quantity of 0 or more.` };
-    }
-  }
+  const built = buildCreateProductPayload(input);
+  if (!built.ok) return { error: built.error };
 
   const res = await fetch(`${API_URL}/api/admin/products`, {
     method: "POST",
@@ -90,14 +58,7 @@ export async function createProductAction(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      name: input.name.trim(),
-      description: input.description.trim(),
-      categoryId: input.categoryId,
-      imageUrls,
-      variants,
-      publish: input.publish,
-    }),
+    body: JSON.stringify(built.payload),
     cache: "no-store",
   });
 
