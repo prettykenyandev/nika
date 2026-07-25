@@ -23,6 +23,15 @@ interface ApiError {
   errors?: Record<string, string[]>;
 }
 
+/** Pick the most useful human-readable message from an API error body. */
+export function apiErrorMessage(problem: ApiError, status: number): string {
+  const fallback = `Request failed (${status}).`;
+  const firstFieldError = problem.errors
+    ? Object.values(problem.errors).flat()[0]
+    : undefined;
+  return firstFieldError ?? problem.title ?? fallback;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -38,10 +47,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let message = `Request failed (${response.status}).`;
     try {
       const problem = (await response.json()) as ApiError;
-      const firstFieldError = problem.errors
-        ? Object.values(problem.errors).flat()[0]
-        : undefined;
-      message = firstFieldError ?? problem.title ?? message;
+      message = apiErrorMessage(problem, response.status);
     } catch {
       // non-JSON error body; keep the default message
     }

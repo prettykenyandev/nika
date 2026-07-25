@@ -7,6 +7,23 @@ import type {
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5087";
 
+export interface ProductQueryParams {
+  category?: string;
+  search?: string;
+  page?: number;
+}
+
+/** Build the querystring (including leading `?`) for the products endpoint. */
+export function buildProductsQuery(params: ProductQueryParams): string {
+  const query = new URLSearchParams();
+  if (params.category) query.set("category", params.category);
+  if (params.search) query.set("search", params.search);
+  if (params.page) query.set("page", String(params.page));
+
+  const suffix = query.toString();
+  return suffix ? `?${suffix}` : "";
+}
+
 async function getJson<T>(path: string, revalidateSeconds: number): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     next: { revalidate: revalidateSeconds },
@@ -20,18 +37,13 @@ async function getJson<T>(path: string, revalidateSeconds: number): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function getProducts(params: {
-  category?: string;
-  search?: string;
-  page?: number;
-}): Promise<PagedResult<ProductSummaryDto>> {
-  const query = new URLSearchParams();
-  if (params.category) query.set("category", params.category);
-  if (params.search) query.set("search", params.search);
-  if (params.page) query.set("page", String(params.page));
-
-  const suffix = query.toString() ? `?${query.toString()}` : "";
-  return getJson<PagedResult<ProductSummaryDto>>(`/api/catalog/products${suffix}`, 60);
+export function getProducts(
+  params: ProductQueryParams,
+): Promise<PagedResult<ProductSummaryDto>> {
+  return getJson<PagedResult<ProductSummaryDto>>(
+    `/api/catalog/products${buildProductsQuery(params)}`,
+    60,
+  );
 }
 
 export function getProductBySlug(slug: string): Promise<ProductDetailDto> {
