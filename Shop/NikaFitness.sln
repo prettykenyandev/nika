@@ -21,6 +21,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NikaFitness.Domain.Tests", "tests\NikaFitness.Domain.Tests\NikaFitness.Domain.Tests.csproj", "{73BD55FC-BBBB-4281-900A-B808D7F994A7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NikaFitness.Application.Tests", "tests\NikaFitness.Application.Tests\NikaFitness.Application.Tests.csproj", "{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -115,6 +117,18 @@ Global
 		{73BD55FC-BBBB-4281-900A-B808D7F994A7}.Release|x64.Build.0 = Release|Any CPU
 		{73BD55FC-BBBB-4281-900A-B808D7F994A7}.Release|x86.ActiveCfg = Release|Any CPU
 		{73BD55FC-BBBB-4281-900A-B808D7F994A7}.Release|x86.Build.0 = Release|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Debug|x64.Build.0 = Debug|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Debug|x86.Build.0 = Debug|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Release|x64.ActiveCfg = Release|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Release|x64.Build.0 = Release|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Release|x86.ActiveCfg = Release|Any CPU
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -127,5 +141,6 @@ Global
 		{EE2B165B-7F8B-432F-919D-523D4A4C41C9} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{EDBD804A-7502-457A-8E06-4523BBC2229D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{73BD55FC-BBBB-4281-900A-B808D7F994A7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{3BBB2967-10A2-4DDC-9DC9-CFB723A9938C} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
