@@ -4,6 +4,15 @@ const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { Store } = require("./src/store");
 const { api } = require("./src/api");
+const {
+  normalizeSku,
+  isValidMpesaPhone,
+  saleTotal,
+  saleCurrency,
+  isSessionActive,
+  adjustCacheStock: adjustStock,
+  buildSalePayload,
+} = require("./src/pos-core");
 
 const DEFAULT_API_URL = process.env.NIKA_API_URL || "http://localhost:5087";
 const PING_INTERVAL_MS = 8000;
@@ -26,11 +35,7 @@ function auth() {
 }
 
 function isLoggedIn() {
-  const a = auth();
-  if (!a?.token) return false;
-  // Treat an expired token as logged-out so we re-auth before selling.
-  if (a.expiresAtUtc && new Date(a.expiresAtUtc) <= new Date()) return false;
-  return true;
+  return isSessionActive(auth());
 }
 
 function pendingCount() {
@@ -55,7 +60,7 @@ function broadcastStatus() {
   mainWindow?.webContents.send("pos:status", statusPayload());
 }
 
-const normSku = (sku) => String(sku || "").trim().toUpperCase();
+const normSku = normalizeSku;
 
 function cacheVariant(variant) {
   store.update("cache", (cache) => {
@@ -65,17 +70,7 @@ function cacheVariant(variant) {
 }
 
 function adjustCacheStock(variantId, delta) {
-  store.update("cache", (cache) => {
-    for (const key of Object.keys(cache)) {
-      if (cache[key].variantId === variantId) {
-        cache[key] = {
-          ...cache[key],
-          stockQuantity: Math.max(0, cache[key].stockQuantity + delta),
-        };
-      }
-    }
-    return cache;
-  });
+  store.update("cache", (cache) => adjustStock(cache, variantId, delta));
 }
 
 // ---------------------------------------------------------------------------
@@ -155,15 +150,8 @@ async function syncOutbox() {
   try {
     const queue = store.get("outbox").filter((s) => s.status !== "failed");
     for (const sale of queue) {
-      const payload = {
-        items: sale.items.map((i) => ({
-          productVariantId: i.variant.variantId,
-          quantity: i.quantity,
-        })),
-        method: "Card", // only card sales are ever queued offline
-        customerPhone: null,
-        customerEmail: null,
-      };
+      // only card sales are ever queued offline
+      const payload = buildSalePayload(sale.items, "Card", null);
       const res = await api.createSale(apiUrl(), auth().token, payload);
 
       if (res.ok) {
@@ -278,21 +266,16 @@ function registerIpc() {
       return { ok: false, error: "Choose Card or M-Pesa." };
     }
 
-    const total = items.reduce((sum, i) => sum + i.variant.price * i.quantity, 0);
-    const currency = items[0].variant.currency || "KES";
+    const total = saleTotal(items);
+    const currency = saleCurrency(items);
     const phone = (customerPhone || "").trim();
-    if (method === "Mpesa" && !/^(2547|2541)\d{8}$/.test(phone)) {
+    if (method === "Mpesa" && !isValidMpesaPhone(phone)) {
       return { ok: false, error: "Enter the customer's M-Pesa phone as 2547XXXXXXXX." };
     }
 
     // Try online first if we can.
     if (online && isLoggedIn()) {
-      const payload = {
-        items: items.map((i) => ({ productVariantId: i.variant.variantId, quantity: i.quantity })),
-        method,
-        customerPhone: method === "Mpesa" ? phone : null,
-        customerEmail: null,
-      };
+      const payload = buildSalePayload(items, method, phone);
       const res = await api.createSale(apiUrl(), auth().token, payload);
       if (res.ok && res.data) {
         for (const i of items) adjustCacheStock(i.variant.variantId, -i.quantity);
