@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { API_URL } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { readApiError } from "@/lib/api-error";
 import type { PosSaleResult, PosVariant } from "@/lib/types";
 
 export interface LookupSkuResult {
@@ -28,7 +29,7 @@ export async function lookupSkuAction(sku: string): Promise<LookupSkuResult> {
 
   if (res.status === 401) return { error: "Session expired. Please log in again." };
   if (res.status === 404) return { error: `No product found for SKU “${trimmed}”.` };
-  if (!res.ok) return { error: await readError(res, "Lookup failed") };
+  if (!res.ok) return { error: await readApiError(res, "Lookup failed") };
 
   return { variant: (await res.json()) as PosVariant };
 }
@@ -69,31 +70,10 @@ export async function createPosSaleAction(
   });
 
   if (res.status === 401) return { error: "Session expired. Please log in again." };
-  if (!res.ok) return { error: await readError(res, "Sale could not be completed") };
+  if (!res.ok) return { error: await readApiError(res, "Sale could not be completed") };
 
   // Stock changed — refresh the inventory dashboard.
   revalidatePath("/");
 
   return { result: (await res.json()) as PosSaleResult };
-}
-
-async function readError(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = (await res.json()) as {
-      detail?: string;
-      title?: string;
-      message?: string;
-      errors?: Record<string, string[]>;
-    };
-    if (body.errors) {
-      const messages = Object.values(body.errors).flat();
-      if (messages.length) return messages.join(" ");
-    }
-    if (body.detail) return body.detail;
-    if (body.message) return body.message;
-    if (body.title) return body.title;
-  } catch {
-    // ignore parse failures
-  }
-  return `${fallback} (${res.status}).`;
 }

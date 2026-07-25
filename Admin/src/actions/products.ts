@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { API_URL } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { buildCreateProductPayload, toSlug } from "@/lib/products";
+import { readApiError } from "@/lib/api-error";
 import type { CreateProductInput } from "@/lib/types";
 
 export interface CreateCategoryResult {
@@ -31,7 +32,7 @@ export async function createCategoryAction(
   });
 
   if (res.status === 401) return { error: "Session expired. Please log in again." };
-  if (!res.ok) return { error: await readError(res, "Failed to create category") };
+  if (!res.ok) return { error: await readApiError(res, "Failed to create category") };
 
   const data = (await res.json()) as { id: string };
   revalidatePath("/products/new");
@@ -63,7 +64,7 @@ export async function createProductAction(
   });
 
   if (res.status === 401) return { error: "Session expired. Please log in again." };
-  if (!res.ok) return { error: await readError(res, "Failed to create product") };
+  if (!res.ok) return { error: await readApiError(res, "Failed to create product") };
 
   const data = (await res.json()) as { id: string };
 
@@ -71,23 +72,4 @@ export async function createProductAction(
   revalidatePath("/");
 
   return { success: { id: data.id, slug: toSlug(input.name), name: input.name.trim() } };
-}
-
-async function readError(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = (await res.json()) as {
-      detail?: string;
-      title?: string;
-      errors?: Record<string, string[]>;
-    };
-    if (body.errors) {
-      const messages = Object.values(body.errors).flat();
-      if (messages.length) return messages.join(" ");
-    }
-    if (body.detail) return body.detail;
-    if (body.title) return body.title;
-  } catch {
-    // ignore parse failures
-  }
-  return `${fallback} (${res.status}).`;
 }
